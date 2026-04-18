@@ -63,7 +63,10 @@ class MainActivity : Activity() {
                     val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
                         addCategory(Intent.CATEGORY_OPENABLE)
                         type = "*/*"
-                        putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/octet-stream", "application/x-gameboy-rom"))
+                        putExtra(
+                            Intent.EXTRA_MIME_TYPES,
+                            arrayOf("application/octet-stream", "application/x-gameboy-rom")
+                        )
                     }
 
                     return try {
@@ -86,9 +89,7 @@ class MainActivity : Activity() {
         if (requestCode == FILE_CHOOSER_REQUEST) {
             val result = if (resultCode == RESULT_OK && data?.data != null) {
                 arrayOf(data.data!!)
-            } else {
-                null
-            }
+            } else null
             filePathCallback?.onReceiveValue(result)
             filePathCallback = null
         }
@@ -104,6 +105,10 @@ class MainActivity : Activity() {
 
     override fun onPause() {
         if (::webView.isInitialized) {
+            webView.evaluateJavascript(
+                "(function(){ if(typeof autoSave === 'function') autoSave(); })();",
+                null
+            )
             webView.onPause()
         }
         super.onPause()
@@ -118,6 +123,10 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         if (::webView.isInitialized) {
+            webView.evaluateJavascript(
+                "(function(){ if(typeof autoSave === 'function') autoSave(); })();",
+                null
+            )
             webView.destroy()
         }
         filePathCallback?.onReceiveValue(null)
