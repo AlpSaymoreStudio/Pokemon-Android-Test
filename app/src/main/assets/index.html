@@ -136,6 +136,46 @@
     .b { background: #0044cc; border-color: #4488ff; }
     .meta { padding: 10px 20px; border-radius: 999px; font-size: 12px; }
 
+    /* TAMBAHAN: Save system */
+    #save-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #slot-select {
+      background: #1a1a2e;
+      color: #f0c040;
+      border: 1px solid #f0c04066;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .save-btn {
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      border: 2px solid;
+      color: #fff;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .save-btn:active { transform: scale(0.95); }
+    .save-btn.simpan { background: #1b4d1b; border-color: #33cc33; }
+    .save-btn.muat   { background: #1a2a4d; border-color: #4488ff; }
+
+    #save-toast {
+      font-size: 11px;
+      min-height: 14px;
+      text-align: center;
+    }
+    /* ===================== */
+
     @media (max-width: 760px) {
       body {
         grid-template-columns: 180px 1fr 170px;
@@ -183,6 +223,18 @@
       <button class="control-btn meta" data-key="select">SELECT</button>
       <button class="control-btn meta" data-key="start">START</button>
     </div>
+    <!-- TAMBAHAN: Save controls -->
+    <div id="save-controls">
+      <select id="slot-select">
+        <option value="0">Slot 1</option>
+        <option value="1">Slot 2</option>
+        <option value="2">Slot 3</option>
+      </select>
+      <button class="save-btn simpan" id="btn-save">💾 Simpan</button>
+      <button class="save-btn muat" id="btn-load">📂 Muat</button>
+    </div>
+    <div id="save-toast"></div>
+    <!-- ====================== -->
   </main>
 
   <div id="actions">
@@ -222,6 +274,11 @@
     var canvasNode = document.getElementById('screen');
     var fileNode = document.getElementById('rom-file');
     var chooseNode = document.getElementById('choose-rom');
+    // TAMBAHAN
+    var toastNode = document.getElementById('save-toast');
+    var slotNode = document.getElementById('slot-select');
+    var btnSave = document.getElementById('btn-save');
+    var btnLoad = document.getElementById('btn-load');
 
     if (typeof settings !== 'undefined') {
       settings[0] = false;
@@ -232,6 +289,55 @@
     function setStatus(message) {
       statusNode.textContent = message;
     }
+
+    // TAMBAHAN: Toast + save/load
+    var toastTimer = null;
+    function showToast(msg, color) {
+      toastNode.style.color = color || '#aaa';
+      toastNode.textContent = msg;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function() { toastNode.textContent = ''; }, 2500);
+    }
+
+    function getSlotKey() {
+      if (!gameboy) return null;
+      return 'FREEZE_' + gameboy.name + '_slot' + slotNode.value;
+    }
+
+    function doSaveState() {
+      if (!GameBoyEmulatorInitialized()) {
+        showToast('Belum ada game yang berjalan.', '#ff8888');
+        return;
+      }
+      saveSRAM();
+      saveState(getSlotKey());
+      showToast('✅ Tersimpan di Slot ' + (parseInt(slotNode.value) + 1), '#88ff88');
+    }
+
+    function doLoadState() {
+      if (!gameboy) {
+        showToast('Belum ada ROM yang dipilih.', '#ff8888');
+        return;
+      }
+      var key = getSlotKey();
+      if (findValue(key) == null) {
+        showToast('❌ Slot ' + (parseInt(slotNode.value) + 1) + ' kosong.', '#ff8888');
+        return;
+      }
+      openState(key, canvasNode);
+      overlayNode.style.display = 'none';
+      showToast('📂 Dimuat dari Slot ' + (parseInt(slotNode.value) + 1), '#88aaff');
+    }
+
+    btnSave.addEventListener('click', doSaveState);
+    btnLoad.addEventListener('click', doLoadState);
+
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden && GameBoyEmulatorInitialized()) {
+        autoSave();
+      }
+    });
+    // ===========================
 
     function startROMFromBuffer(buffer, name) {
       var bytes = new Uint8Array(buffer);
